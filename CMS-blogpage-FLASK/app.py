@@ -1,78 +1,10 @@
 from flask import Flask, request
-from flask_restful import Resource, Api, abort
-import sqlite3
+from flask_restful import Resource, Api
 from datetime import datetime
+from QUERY import *
 
 app = Flask(__name__)
 api = Api(app)
-
-
-def get_user():
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.execute("SELECT * FROM user")
-
-    userlist = {}
-    for row in cursor:
-        userlist['user' + str(row[0])] = {
-            'id': row[0],
-            'username': row[1],
-            'password': row[2],
-            'level': row[3]
-        }
-
-    conn.close()
-
-    return userlist
-
-
-def abort_user(user_id):
-    if user_id not in get_user():
-        abort(404, message='user {} doesnt exist'.format(user_id))
-
-
-def get_post():
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.execute("SELECT * FROM post")
-
-    postlist = {}
-    for row in cursor:
-        postlist['post' + str(row[0])] = {
-            'id': row[0],
-            'author': row[1],
-            'title': row[2],
-            'createdAt': row[3],
-            'content': row[4]
-        }
-
-    conn.close()
-
-    return postlist
-
-
-def abort_post(post_id):
-    if post_id not in get_post():
-        abort(404, message='post {} doesnt exist'.format(post_id))
-
-
-def get_category():
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.execute("SELECT * FROM category")
-
-    categorylist = {}
-    for row in cursor:
-        categorylist['category' + str(row[0])] = {
-            'id': row[0],
-            'title': row[1]
-        }
-
-    conn.close()
-
-    return categorylist
-
-
-def abort_category(category_id):
-    if category_id not in get_category():
-        abort(404, message='post {} doesnt exist'.format(category_id))
 
 
 class UserAll(Resource):
@@ -141,10 +73,18 @@ class PostAdd(Resource):
         title       = request.args.get('title')
         createdAt   = str(datetime.now())
         content     = request.args.get('content')
+        category    = request.args.get('category').split(',')
 
         conn = sqlite3.connect('mydatabase.db')
         conn.execute("INSERT INTO post (author,title,createdAt,content) VALUES ('{A}','{T}','{C}','{CONTENT}')"
                      .format(A=author, T=title, C=createdAt, CONTENT=content))
+
+        for i in category:
+            for j in get_category().values():
+                if i == j['title']:
+                    conn.execute("INSERT INTO post_category (post_id,category_id) VALUES ('{P}','{C}')"
+                                 .format(P=id, C=j['id']))
+
         conn.commit()
         conn.close()
 
@@ -160,11 +100,21 @@ class PostEdit(Resource):
         author      = request.args.get('username')
         title       = request.args.get('title')
         content     = request.args.get('content')
-        id = post_id[4:]
+        category    = request.args.get('category').split(',')
+        id          = post_id[4:]
 
         conn = sqlite3.connect('mydatabase.db')
         conn.execute("UPDATE post SET author = '{A}', title = '{T}', content = '{CONTENT}' WHERE id = {ID}"
                      .format(A=author, T=title, CONTENT=content, ID=id))
+
+        conn.execute("DELETE FROM post_category WHERE post_id = {ID}"
+                     .format(ID=id))
+
+        for i in category:
+            for j in get_category().values():
+                if i == j['title']:
+                    conn.execute("INSERT INTO post_category (post_id,category_id) VALUES ('{P}','{C}')"
+                                 .format(P=id, C=j['id']))
 
         conn.commit()
         conn.close()
@@ -235,6 +185,11 @@ class CategoryDelete(Resource):
         return get_category()
 
 
+class PostCategory(Resource):
+    def get(self):
+        return get_post_category()
+
+
 api.add_resource(UserAll, '/userlist')
 api.add_resource(UserAdd, '/user')
 api.add_resource(UserEdit, '/user/<user_id>')
@@ -247,6 +202,7 @@ api.add_resource(CategoryAll, '/categorylist')
 api.add_resource(CategoryAdd, '/category')
 api.add_resource(CategoryEdit, '/category/<category_id>')
 api.add_resource(CategoryDelete, '/deletecategory/<category_id>')
+api.add_resource(PostCategory, '/postcategory')
 
 if __name__ == '__main__':
     app.run()
