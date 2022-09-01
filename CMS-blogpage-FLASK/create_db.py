@@ -23,11 +23,17 @@ conn.execute('''CREATE TABLE IF NOT EXISTS COMMENT
               createdAt DATETIME,
               content   TEXT);''')
 
+conn.execute('''CREATE TABLE IF NOT EXISTS POST_COMMENT
+            (post_id        INTEGER         NOT NULL,
+             comment_id     INTEGER         NOT NULL);''')
+
 conn.execute('''CREATE TABLE IF NOT EXISTS CATEGORY
              (id        INTEGER PRIMARY KEY AUTOINCREMENT,
               title     TEXT            NOT NULL);''')
 
 conn.execute('''CREATE TABLE IF NOT EXISTS POST_CATEGORY
-            (post_id    INTEGER         NOT NULL,
-             comment_id INTEGER         NOT NULL);''')
+            (post_id        INTEGER         NOT NULL,
+             category_id    INTEGER         NOT NULL);''')
 
+conn.commit()
+conn.close()
