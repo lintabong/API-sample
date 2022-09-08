@@ -13,17 +13,21 @@ import (
 
 func main() {
 	router := gin.Default()
+	
+	public := router.Group("/api")
+	{
+		router.GET("/", rootHandler)
+		router.POST("/login", controllers.Login)
+		router.GET("/logout", controllers.Logout)
+	}
 
-	router.GET("/", rootHandler)
-	router.GET("/product/:id", product.GetSingleProduct)
-	router.POST("/product/:id", product.UpdateProduct)
-	router.POST("/deleteproduct/:id", product.DeleteProduct)
-	router.POST("/newproduct", product.NewProduct)
-
-	router.POST("/login", controllers.Login)
+	
 	private := router.Group("/api", middleware.RequireAuth)
 	{
-		private.GET("/val", secureRoot)
+		private.GET("/product/:id", product.GetSingleProduct)
+		private.POST("/product/:id", product.UpdateProduct)
+		private.POST("/deleteproduct/:id", product.DeleteProduct)
+		private.POST("/newproduct", product.NewProduct)
 	}
 
 	router.Run()
@@ -32,11 +36,5 @@ func main() {
 func rootHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"page": "index",
-	})
-}
-
-func secureRoot(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"secure": "login",
 	})
 }
