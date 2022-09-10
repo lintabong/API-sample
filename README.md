@@ -1,3 +1,3 @@
 # RESTAPI
 
-Free sample RESTful API using python, golang, PHP and Javascript (sooner) xd
+Free sample RESTful API using various programming language
