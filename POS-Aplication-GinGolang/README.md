@@ -1,1 +1,1 @@
-tech: Gin Web Framework, JWT Auth, MySQL
+Used techs : Gin Web Framework, JWT Auth, MySQL, password hasher
