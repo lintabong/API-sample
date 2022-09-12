@@ -1,57 +1,64 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
+	"os"
 	"time"
 
-	"vss/conn"
+	"vss/initializers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func Login(c *gin.Context) {
-	mySigningKey := []byte("AllYourBase")
+
+	initializers.LoadEnvVariables()
 
 	// bind the json
 	body := User{}
 
 	if err := c.BindJSON(&body); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
+
 		return
 	}
 
 	// connect to database
-	var db, err = conn.Connect()
+	var db, err = initializers.Connect()
 	if err != nil {
-		fmt.Println(err.Error())
+		c.JSON(http.StatusRequestTimeout, gin.H{
+			"message": "cant connect to DB",
+		})
+
 		return
 	}
 	defer db.Close()
 
-	// check username
-	var id string
+	// check Username
+	var password *string
+
 	err = db.
-		QueryRow("SELECT id FROM users WHERE username = ?", body.Username).
-		Scan(id)
+		QueryRow("SELECT password FROM users WHERE username = ?", body.Username).
+		Scan(&password)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "username tidak terdaftar",
+			"message": "Username tidak terdaftar",
 		})
+
 		return
 	}
 
-	// check username and password
-	err = db.
-		QueryRow("SELECT id FROM users WHERE username = ? and password = ?", body.Username, body.Password).
-		Scan(id)
+	// check Password
+	err = bcrypt.CompareHashAndPassword([]byte(*password), []byte(body.Password))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Password salah",
 		})
+
 		return
 	}
 
@@ -62,21 +69,20 @@ func Login(c *gin.Context) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(mySigningKey)
+	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant generate token",
+			"message": "cant generate jwt's token",
 		})
 	}
 
 	// save cookie
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("Authorization", tokenString, 3600, "", "", false, true)
+	c.SetCookie("Authorization", tokenString, 3600*24*30, "", "", false, true)
 
 	c.JSON(http.StatusOK, gin.H{
 		"token":    tokenString,
 		"username": body.Username,
-		"password": body.Password,
 	})
 }
