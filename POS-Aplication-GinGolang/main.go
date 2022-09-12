@@ -21,7 +21,6 @@ func main() {
 		router.GET("/logout", controllers.Logout)
 	}
 
-	
 	private := router.Group("/api", middleware.RequireAuth)
 	{
 		private.GET("/product/:id", product.GetSingleProduct)
