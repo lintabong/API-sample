@@ -13,13 +13,12 @@ import (
 
 func main() {
 	router := gin.Default()
-	
-	public := router.Group("/api")
-	{
-		router.GET("/", rootHandler)
-		router.POST("/login", controllers.Login)
-		router.GET("/logout", controllers.Logout)
-	}
+
+	router.GET("/", rootHandler)
+	router.POST("/register", controllers.Register)
+	router.POST("/login", controllers.Login)
+	router.GET("/logout", controllers.Logout)
+	router.GET("/prod/:id", product.GetSingleProduct)
 
 	private := router.Group("/api", middleware.RequireAuth)
 	{
@@ -29,7 +28,7 @@ func main() {
 		private.POST("/newproduct", product.NewProduct)
 	}
 
-	router.Run()
+	router.Run(":" + os.Getenv("PORT"))
 }
 
 func rootHandler(c *gin.Context) {
